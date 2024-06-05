@@ -150,14 +150,26 @@ uninstall_snell() {
     echo "Snell 卸载成功."
 }
 
+show_snell_config() {
+    CONF_FILE="/etc/snell/snell-server.conf"
+    if [ -f "$CONF_FILE" ]; then
+        echo "Snell 配置文件内容:"
+        cat $CONF_FILE
+    else
+        echo -e "\e[31m配置文件不存在.\e[0m"
+    fi
+}
+
 # 显示菜单选项
 echo "选择操作:"
 echo "1. 安装 Snell"
 echo "2. 卸载 Snell"
+echo "3. 显示 Snell 配置文件"
 read -p "输入选项: " choice
 
 case $choice in
     1) install_snell ;;
     2) uninstall_snell ;;
+    3) show_snell_config ;;
     *) echo "无效的选项" ;;
 esac
