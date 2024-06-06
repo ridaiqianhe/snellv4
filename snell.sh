@@ -196,7 +196,17 @@ install_shadow_tls() {
     RANDOM_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12)
     PSK=$(awk -F ' = ' '/psk/ {print $2}' /etc/snell/snell-server.conf)
 
-    read -p "请输入 Shadow-TLS 监听端口: " SHADOW_TLS_PORT
+    read -p "请输入 Shadow-TLS 监听端口 (1-65535): " SHADOW_TLS_PORT
+
+    if [[ "$SHADOW_TLS_PORT" -ge 1 && "$SHADOW_TLS_PORT" -le 65535 ]]; then
+      echo "使用用户输入的端口: $SHADOW_TLS_PORT"
+    else
+      SHADOW_TLS_PORT=$((RANDOM % 55536 + 10000))
+      echo "输入无效，随机生成的端口: $SHADOW_TLS_PORT"
+    fi
+    
+    # 你可以在这里添加其他配置逻辑
+
 
     echo "请选择一个 --tls 参数: "
     OPTIONS=("gateway.icloud.com" "mp.weixin.qq.com" "coding.net" "upyun.com" "sns-video-hw.xhscdn.com" "sns-img-qc.xhscdn.com" "sns-video-qn.xhscdn.com" "p9-dy.byteimg.com" "p6-dy.byteimg.com" "feishu.cn" "douyin.com" "toutiao.com" "v6-dy-y.ixigua.com" "hls3-akm.douyucdn.cn" "publicassets.cdn-apple.com" "weather-data.apple.com")
@@ -251,11 +261,15 @@ EOF
     # 添加 iptables 规则
     sudo iptables -t nat -A PREROUTING -p udp --dport $SHADOW_TLS_PORT -j REDIRECT --to-port $SNELL_PORT
     sudo iptables -t nat -A OUTPUT -p udp --dport $SHADOW_TLS_PORT -j REDIRECT --to-port $SNELL_PORT
-
+    
     # 保存 iptables 规则，使其在重启后生效
     if [ -x "$(command -v iptables-save)" ]; then
+        if [ ! -f /etc/iptables/rules.v4 ]; then
+            sudo touch /etc/iptables/rules.v4
+        fi
         sudo iptables-save > /etc/iptables/rules.v4
     fi
+
 
     get_host_ip
 
