@@ -311,9 +311,9 @@ uninstall_shadow_tls() {
 
 # 显示菜单选项
 echo "选择操作:"
-echo "1. 安装 Snell"
-echo "2. 卸载 Snell"
-echo "3. 显示 Snell 配置文件"
+echo "1. 安装 Snell v4"
+echo "2. 卸载 Snell v4"
+echo "3. 显示 Snell v4配置文件"
 echo "4. 安装 Shadow-TLS v3"
 echo "5. 卸载 Shadow-TLS v3"
 read -p "输入选项: " choice
