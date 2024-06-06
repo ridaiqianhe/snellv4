@@ -220,7 +220,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 Environment=MONOIO_FORCE_LEGACY_DRIVER=1
-ExecStart=/usr/bin/shadow-tls-x86_64-unknown-linux-musl --v3 server --server 0.0.0.0:$SNELL_PORT --password $RANDOM_PASSWORD --listen ::0:$SHADOW_TLS_PORT --tls $tls_option:443
+ExecStart=/usr/bin/shadow-tls-x86_64-unknown-linux-musl --v3 server --server 0.0.0.0:$SNELL_PORT --password $RANDOM_PASSWORD --listen ::0:$SHADOW_TLS_PORT --tls $tls_option
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=shadow-tls
