@@ -180,7 +180,7 @@ show_snell_config() {
 install_shadow_tls() {
     # 下载 Shadow-TLS v3 二进制文件
     cd /usr/bin
-    wget https://github.com/ihciah/shadow-tls/releases/download/v0.2.23/shadow-tls-x86_64-unknown-linux-musl
+    wget https://github.com/ihciah/shadow-tls/releases/download/v0.2.25/shadow-tls-x86_64-unknown-linux-musl
     if [ $? -ne 0 ]; then
         echo "下载 Shadow-TLS 失败."
         exit 1
