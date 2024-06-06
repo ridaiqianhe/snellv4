@@ -212,8 +212,8 @@ install_shadow_tls() {
     # 创建 Systemd 服务文件
     cat > /etc/systemd/system/shadow-tls.service << EOF
 [Unit]
-Description=Shadow-TLS Custom Server Service
-Documentation=man:sstls-server(1)
+Description=Shadow-TLS Server Service
+Documentation=man:sstls-server
 After=network-online.target
 Wants=network-online.target
 
@@ -221,6 +221,9 @@ Wants=network-online.target
 Type=simple
 Environment=MONOIO_FORCE_LEGACY_DRIVER=1
 ExecStart=/usr/bin/shadow-tls-x86_64-unknown-linux-musl --v3 server --server 0.0.0.0:$SNELL_PORT --password $RANDOM_PASSWORD --listen ::0:$SHADOW_TLS_PORT --tls $tls_option:443
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=shadow-tls
 
 [Install]
 WantedBy=multi-user.target
