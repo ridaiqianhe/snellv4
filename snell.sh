@@ -264,11 +264,15 @@ EOF
     
     # 保存 iptables 规则，使其在重启后生效
     if [ -x "$(command -v iptables-save)" ]; then
+        if [ ! -d /etc/iptables ]; then
+            sudo mkdir -p /etc/iptables
+        fi
         if [ ! -f /etc/iptables/rules.v4 ]; then
             sudo touch /etc/iptables/rules.v4
         fi
         sudo iptables-save > /etc/iptables/rules.v4
     fi
+
 
 
     get_host_ip
