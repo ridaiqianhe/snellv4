@@ -6,6 +6,17 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
+country_to_flag() {
+  local country_code=$1
+  local first_letter=${country_code:0:1}
+  local second_letter=${country_code:1:1}
+  local first_code=$(( $(printf "%d" "'$first_letter") - 65 + 0x1F1E6 ))
+  local second_code=$(( $(printf "%d" "'$second_letter") - 65 + 0x1F1E6 ))
+  printf -v flag "\\U%08X\\U%08X" $first_code $second_code
+  echo -e "$flag"
+}
+
+
 get_host_ip() {
     HOST_IP=$(curl -s http://checkip.amazonaws.com)
 }
@@ -25,18 +36,9 @@ get_snell_port() {
 }
 
 install_snell() {
-    # 判断系统及定义系统安装依赖方式
-    REGEX=("debian" "ubuntu" "centos|red hat|kernel|oracle linux|alma|rocky" "'amazon linux'" "fedora")
-    RELEASE=("Debian" "Ubuntu" "CentOS" "CentOS" "Fedora")
-    PACKAGE_UPDATE=("apt-get update" "apt-get update" "yum -y update" "yum -y update" "yum -y update")
-    PACKAGE_INSTALL=("apt -y install" "apt -y install" "yum -y install" "yum -y install" "yum -y install")
-    PACKAGE_REMOVE=("apt -y remove" "apt -y remove" "yum -y remove" "yum -y remove" "yum -y remove")
-    PACKAGE_UNINSTALL=("apt -y autoremove" "apt -y autoremove" "yum -y autoremove" "yum -y autoremove" "yum -y autoremove")
-
-    # 安装必要的软件包
+    apt-get update
     apt-get install -y unzip wget curl
 
-    # 下载 Snell 服务器文件
     SNELL_VERSION="v4.0.1"
     ARCH=$(arch)
     SNELL_URL=""
@@ -51,34 +53,26 @@ install_snell() {
         SNELL_URL="https://dl.nssurge.com/snell/snell-server-$SNELL_VERSION-linux-amd64.zip"
     fi
 
-    # 下载 Snell 服务器文件
     wget $SNELL_URL -O snell-server.zip
     if [ $? -ne 0 ]; then
         echo "下载 Snell 失败."
         exit 1
     fi
 
-    # 解压缩文件到指定目录
-    sudo unzip -o snell-server.zip -d $INSTALL_DIR
+    unzip -o snell-server.zip -d $INSTALL_DIR
     if [ $? -ne 0 ]; then
         echo "解压缩 Snell 失败."
         exit 1
     fi
 
-    # 删除下载的 zip 文件
     rm snell-server.zip
-
-    # 赋予执行权限
     chmod +x $INSTALL_DIR/snell-server
 
-    # 生成随机端口和密码
     RANDOM_PORT=$(shuf -i 30000-65000 -n 1)
     RANDOM_PSK=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)
 
-    # 创建配置文件目录
     mkdir -p $CONF_DIR
 
-    # 创建配置文件
     cat > $CONF_FILE << EOF
 [snell-server]
 listen = ::0:$RANDOM_PORT
@@ -86,7 +80,6 @@ psk = $RANDOM_PSK
 ipv6 = true
 EOF
 
-    # 创建 Systemd 服务文件
     cat > $SYSTEMD_SERVICE_FILE << EOF
 [Unit]
 Description=Snell Proxy Service
@@ -107,22 +100,10 @@ SyslogIdentifier=snell-server
 WantedBy=multi-user.target
 EOF
 
-    # 重载 Systemd 配置
-    sudo systemctl daemon-reload
-    if [ $? -ne 0 ]; then
-        echo "重载 Systemd 配置失败."
-        exit 1
-    fi
+    systemctl daemon-reload
+    systemctl enable snell
+    systemctl start snell
 
-    # 开机自启动 Snell
-    sudo systemctl enable snell
-    if [ $? -ne 0 ]; then
-        echo "开机自启动 Snell 失败."
-        exit 1
-    fi
-
-    # 启动 Snell 服务
-    sudo systemctl start snell
     if [ $? -ne 0 ]; then
         echo "启动 Snell 服务失败."
         exit 1
@@ -130,41 +111,23 @@ EOF
 
     get_host_ip
 
-    # 获取IP所在国家
     IP_COUNTRY=$(curl -s http://ipinfo.io/$HOST_IP/country)
-
-    # 输出所需信息，包含IP所在国家
+    FLAG=$(country_to_flag $IP_COUNTRY)
     echo -e "\e[34mSnell 安装成功.\e[0m"
-    echo -e "\e[34m$IP_COUNTRY = snell, $HOST_IP, $RANDOM_PORT, psk = $RANDOM_PSK, version = 4, reuse = true, tfo = true\e[0m"
+    echo -e "\e[34m$FLAG $IP_COUNTRY = snell, $HOST_IP, $RANDOM_PORT, psk = $RANDOM_PSK, version = 4, reuse = true, tfo = true\e[0m"
 }
 
 uninstall_snell() {
-    # 停止 Snell 服务
-    sudo systemctl stop snell
-    if [ $? -ne 0 ]; then
-        echo "停止 Snell 服务失败."
-        exit 1
+    if systemctl list-units --type=service | grep -q "snell.service"; then
+        systemctl stop snell
+        systemctl disable snell
+        rm /lib/systemd/system/snell.service
+        rm /usr/local/bin/snell-server
+        rm -rf /etc/snell
+        echo "Snell 卸载成功."
+    else
+        echo -e "\e[31mSnell 服务未安装.\e[0m"
     fi
-
-    # 禁用开机自启动
-    sudo systemctl disable snell
-    if [ $? -ne 0 ]; then
-        echo "禁用开机自启动失败."
-        exit 1
-    fi
-
-    # 删除 Systemd 服务文件
-    sudo rm /lib/systemd/system/snell.service
-    if [ $? -ne 0 ]; then
-        echo "删除 Systemd 服务文件失败."
-        exit 1
-    fi
-
-    # 删除安装的文件和目录
-    sudo rm /usr/local/bin/snell-server
-    sudo rm -rf /etc/snell
-
-    echo "Snell 卸载成功."
 }
 
 show_snell_config() {
@@ -178,7 +141,6 @@ show_snell_config() {
 }
 
 install_shadow_tls() {
-    # 下载 Shadow-TLS v3 二进制文件
     cd /usr/bin
     wget https://github.com/ihciah/shadow-tls/releases/download/v0.2.25/shadow-tls-x86_64-unknown-linux-musl
     if [ $? -ne 0 ]; then
@@ -186,27 +148,20 @@ install_shadow_tls() {
         exit 1
     fi
 
-    # 增加运行权限
     chmod +x shadow-tls-x86_64-unknown-linux-musl
 
-    # 获取 Snell 端口
     get_snell_port
 
-    # 生成随机密码
     RANDOM_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12)
     PSK=$(awk -F ' = ' '/psk/ {print $2}' /etc/snell/snell-server.conf)
 
     read -p "请输入 Shadow-TLS 监听端口 (1-65535): " SHADOW_TLS_PORT
-
     if [[ "$SHADOW_TLS_PORT" -ge 1 && "$SHADOW_TLS_PORT" -le 65535 ]]; then
-      echo "使用用户输入的端口: $SHADOW_TLS_PORT"
+        echo "使用用户输入的端口: $SHADOW_TLS_PORT"
     else
-      SHADOW_TLS_PORT=$((RANDOM % 55536 + 10000))
-      echo "输入无效，随机生成的端口: $SHADOW_TLS_PORT"
+        SHADOW_TLS_PORT=$((RANDOM % 55536 + 10000))
+        echo "输入无效，随机生成的端口: $SHADOW_TLS_PORT"
     fi
-    
-    # 你可以在这里添加其他配置逻辑
-
 
     echo "请选择一个 --tls 参数: "
     OPTIONS=("gateway.icloud.com" "mp.weixin.qq.com" "coding.net" "upyun.com" "sns-video-hw.xhscdn.com" "sns-img-qc.xhscdn.com" "sns-video-qn.xhscdn.com" "p9-dy.byteimg.com" "p6-dy.byteimg.com" "feishu.cn" "douyin.com" "toutiao.com" "v6-dy-y.ixigua.com" "hls3-akm.douyucdn.cn" "publicassets.cdn-apple.com" "weather-data.apple.com")
@@ -219,7 +174,6 @@ install_shadow_tls() {
         fi
     done
 
-    # 创建 Systemd 服务文件
     cat > /etc/systemd/system/shadow-tls.service << EOF
 [Unit]
 Description=Shadow-TLS Server Service
@@ -239,41 +193,27 @@ SyslogIdentifier=shadow-tls
 WantedBy=multi-user.target
 EOF
 
-    # 刷新并启动服务
     systemctl daemon-reload
-    if [ $? -ne 0 ];then
-        echo "重载 Systemd 配置失败."
-        exit 1
-    fi
-
     systemctl enable shadow-tls.service
-    if [ $? -ne 0 ];then
-        echo "开机自启动 Shadow-TLS 失败."
-        exit 1
-    fi
-
     systemctl start shadow-tls.service
-    if [ $? -ne 0 ];then
+
+    if [ $? -ne 0 ]; then
         echo "启动 Shadow-TLS 服务失败."
         exit 1
     fi
 
-    # 添加 iptables 规则
-    sudo iptables -t nat -A PREROUTING -p udp --dport $SHADOW_TLS_PORT -j REDIRECT --to-port $SNELL_PORT
-    sudo iptables -t nat -A OUTPUT -p udp --dport $SHADOW_TLS_PORT -j REDIRECT --to-port $SNELL_PORT
+    iptables -t nat -A PREROUTING -p udp --dport $SHADOW_TLS_PORT -j REDIRECT --to-port $SNELL_PORT
+    iptables -t nat -A OUTPUT -p udp --dport $SHADOW_TLS_PORT -j REDIRECT --to-port $SNELL_PORT
     
-    # 保存 iptables 规则，使其在重启后生效
     if [ -x "$(command -v iptables-save)" ]; then
         if [ ! -d /etc/iptables ]; then
-            sudo mkdir -p /etc/iptables
+            mkdir -p /etc/iptables
         fi
         if [ ! -f /etc/iptables/rules.v4 ]; then
-            sudo touch /etc/iptables/rules.v4
+            touch /etc/iptables/rules.v4
         fi
-        sudo iptables-save > /etc/iptables/rules.v4
+        iptables-save > /etc/iptables/rules.v4
     fi
-
-
 
     get_host_ip
 
@@ -282,47 +222,64 @@ EOF
 }
 
 uninstall_shadow_tls() {
-    # 停止 Shadow-TLS 服务
-    systemctl stop shadow-tls
-    if [ $? -ne 0 ]; then
-        echo "停止 Shadow-TLS 服务失败."
-        exit 1
+    if systemctl list-units --type=service | grep -q "shadow-tls.service"; then
+        systemctl stop shadow-tls
+        systemctl disable shadow-tls
+        rm /etc/systemd/system/shadow-tls.service
+        rm /usr/bin/shadow-tls-x86_64-unknown-linux-musl
+        echo "Shadow-TLS 卸载成功."
+    else
+        echo -e "\e[31mShadow-TLS 服务未安装.\e[0m"
     fi
-
-    # 禁用开机自启动
-    systemctl disable shadow-tls
-    if [ $? -ne 0 ]; then
-        echo "禁用开机自启动失败."
-        exit 1
-    fi
-
-    # 删除 Systemd 服务文件
-    rm /etc/systemd/system/shadow-tls.service
-    if [ $? -ne 0 ]; then
-        echo "删除 Systemd 服务文件失败."
-        exit 1
-    fi
-
-    # 删除安装的文件
-    rm /usr/bin/shadow-tls-x86_64-unknown-linux-musl
-
-    echo "Shadow-TLS 卸载成功."
 }
 
-# 显示菜单选项
+generate_config() {
+    get_host_ip
+    IP_COUNTRY=$(curl -s http://ipinfo.io/$HOST_IP/country)
+    FLAG=$(country_to_flag $IP_COUNTRY)
+    
+    if systemctl list-units --type=service | grep -q "snell.service"; then
+        CONF_FILE="/etc/snell/snell-server.conf"
+        if [ -f "$CONF_FILE" ]; then
+            SNELL_PORT=$(awk -F '[: ]+' '/listen/ {print $4}' $CONF_FILE)
+            PSK=$(awk -F ' = ' '/psk/ {print $2}' $CONF_FILE)
+            echo -e "\e[34m$FLAG $IP_COUNTRY = snell, $HOST_IP, $SNELL_PORT, psk = $PSK, version = 4, reuse = true, tfo = true\e[0m"
+        else
+            echo -e "\e[31mSnell 配置文件不存在.\e[0m"
+        fi
+    else
+        echo -e "\e[31mSnell 服务未安装.\e[0m"
+    fi
+
+    if systemctl list-units --type=service | grep -q "shadow-tls.service"; then
+        SHADOW_TLS_CONF="/etc/systemd/system/shadow-tls.service"
+        if [ -f "$SHADOW_TLS_CONF" ]; then
+            SHADOW_TLS_PORT=$(awk -F '[: ]+' '/--listen/ {print $5}' $SHADOW_TLS_CONF)
+            SHADOW_TLS_PASSWORD=$(awk -F '[: ]+' '/--password/ {print $5}' $SHADOW_TLS_CONF)
+            SHADOW_TLS_SNI=$(awk -F '[: ]+' '/--tls/ {print $5}' $SHADOW_TLS_CONF)
+            PSK=$(awk -F ' = ' '/psk/ {print $2}' /etc/snell/snell-server.conf)
+            echo -e "\e[34m$FLAG $HOST_IP = snell, $HOST_IP, $SHADOW_TLS_PORT, psk=$PSK, version=4, reuse=true, shadow-tls-password=$SHADOW_TLS_PASSWORD, shadow-tls-sni=$SHADOW_TLS_SNI, shadow-tls-version=3\e[0m"
+        else
+            echo -e "\e[31mShadow-TLS v3 配置文件不存在.\e[0m"
+        fi
+    else
+        echo -e "\e[31mShadow-TLS v3 服务未安装.\e[0m"
+    fi
+}
+
 echo "选择操作:"
 echo "1. 安装 Snell v4"
 echo "2. 卸载 Snell v4"
-echo "3. 显示 Snell v4配置文件"
-echo "4. 安装 Shadow-TLS v3"
-echo "5. 卸载 Shadow-TLS v3"
+echo "3. 安装 Shadow-TLS v3"
+echo "4. 卸载 Shadow-TLS v3"
+echo "5. 查看 Snell 和 Shadow-TLS v3 的配置"
 read -p "输入选项: " choice
 
 case $choice in
     1) install_snell ;;
     2) uninstall_snell ;;
-    3) show_snell_config ;;
-    4) install_shadow_tls ;;
-    5) uninstall_shadow_tls ;;
+    3) install_shadow_tls ;;
+    4) uninstall_shadow_tls ;;
+    5) generate_config ;;
     *) echo "无效的选项" ;;
 esac
