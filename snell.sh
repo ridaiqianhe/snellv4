@@ -16,7 +16,6 @@ country_to_flag() {
   echo -e "$flag"
 }
 
-
 get_host_ip() {
     HOST_IP=$(curl -s http://checkip.amazonaws.com)
 }
@@ -240,7 +239,7 @@ generate_config() {
     
     if systemctl list-units --type=service | grep -q "snell.service"; then
         CONF_FILE="/etc/snell/snell-server.conf"
-        if [ -f "$CONF_FILE" ]; then
+        if [ -f "$CONF_FILE" ];then
             SNELL_PORT=$(awk -F '[: ]+' '/listen/ {print $4}' $CONF_FILE)
             PSK=$(awk -F ' = ' '/psk/ {print $2}' $CONF_FILE)
             echo -e "\e[34m$FLAG $IP_COUNTRY = snell, $HOST_IP, $SNELL_PORT, psk = $PSK, version = 4, reuse = true, tfo = true\e[0m"
@@ -254,9 +253,9 @@ generate_config() {
     if systemctl list-units --type=service | grep -q "shadow-tls.service"; then
         SHADOW_TLS_CONF="/etc/systemd/system/shadow-tls.service"
         if [ -f "$SHADOW_TLS_CONF" ]; then
-            SHADOW_TLS_PORT=$(awk -F '[: ]+' '/--listen/ {print $5}' $SHADOW_TLS_CONF)
-            SHADOW_TLS_PASSWORD=$(awk -F '[: ]+' '/--password/ {print $5}' $SHADOW_TLS_CONF)
-            SHADOW_TLS_SNI=$(awk -F '[: ]+' '/--tls/ {print $5}' $SHADOW_TLS_CONF)
+            SHADOW_TLS_PORT=$(grep 'ExecStart=' $SHADOW_TLS_CONF | sed -n 's/.*--listen ::0:\([0-9]*\).*/\1/p')
+            SHADOW_TLS_PASSWORD=$(grep 'ExecStart=' $SHADOW_TLS_CONF | sed -n 's/.*--password \([^ ]*\).*/\1/p')
+            SHADOW_TLS_SNI=$(grep 'ExecStart=' $SHADOW_TLS_CONF | sed -n 's/.*--tls \([^ ]*\).*/\1/p')
             PSK=$(awk -F ' = ' '/psk/ {print $2}' /etc/snell/snell-server.conf)
             echo -e "\e[34m$FLAG $IP_COUNTRY = snell, $HOST_IP, $SHADOW_TLS_PORT, psk=$PSK, version=4, reuse=true, shadow-tls-password=$SHADOW_TLS_PASSWORD, shadow-tls-sni=$SHADOW_TLS_SNI, shadow-tls-version=3\e[0m"
         else
