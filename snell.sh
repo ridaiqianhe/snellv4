@@ -258,7 +258,7 @@ generate_config() {
             SHADOW_TLS_PASSWORD=$(awk -F '[: ]+' '/--password/ {print $5}' $SHADOW_TLS_CONF)
             SHADOW_TLS_SNI=$(awk -F '[: ]+' '/--tls/ {print $5}' $SHADOW_TLS_CONF)
             PSK=$(awk -F ' = ' '/psk/ {print $2}' /etc/snell/snell-server.conf)
-            echo -e "\e[34m$FLAG $HOST_IP = snell, $HOST_IP, $SHADOW_TLS_PORT, psk=$PSK, version=4, reuse=true, shadow-tls-password=$SHADOW_TLS_PASSWORD, shadow-tls-sni=$SHADOW_TLS_SNI, shadow-tls-version=3\e[0m"
+            echo -e "\e[34m$FLAG $IP_COUNTRY = snell, $HOST_IP, $SHADOW_TLS_PORT, psk=$PSK, version=4, reuse=true, shadow-tls-password=$SHADOW_TLS_PASSWORD, shadow-tls-sni=$SHADOW_TLS_SNI, shadow-tls-version=3\e[0m"
         else
             echo -e "\e[31mShadow-TLS v3 配置文件不存在.\e[0m"
         fi
