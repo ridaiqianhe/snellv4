@@ -38,7 +38,7 @@ install_snell() {
     apt-get update
     apt-get install -y unzip wget curl
 
-    SNELL_VERSION="v4.0.1"
+    SNELL_VERSION="v4.1.0"
     ARCH=$(arch)
     SNELL_URL=""
     INSTALL_DIR="/usr/local/bin"
@@ -217,7 +217,7 @@ EOF
     get_host_ip
 
     echo -e "\e[34mShadow-TLS 安装成功.\e[0m"
-    echo -e "\e[34mHK = snell, $HOST_IP, $SHADOW_TLS_PORT, psk=$PSK, version=4, reuse=true, shadow-tls-password=$RANDOM_PASSWORD, shadow-tls-sni=${tls_option}, shadow-tls-version=3\e[0m"
+    echo -e "\e[34m$FLAG $IP_COUNTRY = snell, $HOST_IP, $SHADOW_TLS_PORT, psk=$PSK, version=4, reuse=true, shadow-tls-password=$RANDOM_PASSWORD, shadow-tls-sni=${tls_option}, shadow-tls-version=3\e[0m"
 }
 
 uninstall_shadow_tls() {
