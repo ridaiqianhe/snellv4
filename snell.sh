@@ -38,7 +38,7 @@ install_snell() {
     apt-get update
     apt-get install -y unzip wget curl
 
-    SNELL_VERSION="v4.1.0"
+    SNELL_VERSION="v4.1.1"
     ARCH=$(arch)
     SNELL_URL=""
     INSTALL_DIR="/usr/local/bin"
