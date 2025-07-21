@@ -878,7 +878,7 @@ install_shadow_tls() {
 
     show_progress 5 8 "选择 TLS SNI..."
     echo "请选择一个 --tls 参数 (默认选择1): "
-    local options=("gateway.icloud.com" "mp.weixin.qq.com" "coding.net" "upyun.com" "sns-video-hw.xhscdn.com" "sns-img-qc.xhscdn.com" "sns-video-qn.xhscdn.com" "p9-dy.byteimg.com" "p6-dy.byteimg.com" "feishu.cn" "douyin.com" "toutiao.com" "v6-dy-y.ixigua.com" "hls3-akm.douyucdn.cn" "publicassets.cdn-apple.com" "weather-data.apple.com")
+    local options=("gateway.icloud.com" "mp.weixin.qq.com" "publicassets.cdn-apple.com" "weather-data.apple.com" "waphn.189.cn")
     
     # 显示选项
     for i in "${!options[@]}"; do
