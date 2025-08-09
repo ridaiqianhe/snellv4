@@ -916,6 +916,11 @@ SyslogIdentifier=shadow-tls
 Restart=on-failure
 RestartSec=3
 
+LimitNOFILE=1048576
+LimitNPROC=1048576
+LimitCORE=infinity
+LimitMEMLOCK=infinity
+
 [Install]
 WantedBy=multi-user.target
 EOF
